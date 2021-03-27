@@ -4,6 +4,7 @@ module.exports = {
     callbackNames: {
         webContentsLogin: "web.contents.login",
         webContentsMessage: "web.contents.message",
+        onBeforeRequest: "on.before.request",
     },
     eventNames: {
         appCmdQuit: "app.cmd.quit",
@@ -57,6 +58,7 @@ module.exports = {
         sessionEventClearedCache: "session.event.cleared.cache",
         sessionEventWillDownload: "session.event.will.download",
         sessionEventFlushedStorage: "session.event.flushed.storage",
+        sessionOnBeforeRequest: "session.on.before.request",
         subMenuCmdAppend: "sub.menu.cmd.append",
         subMenuCmdClosePopup: "sub.menu.cmd.close.popup",
         subMenuCmdInsert: "sub.menu.cmd.insert",

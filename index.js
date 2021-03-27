@@ -284,6 +284,13 @@ function onReady () {
             case consts.eventNames.windowCmdWebContentsExecuteJavascript:
             elements[json.targetID].webContents.executeJavaScript(json.code).then(() => client.write(json.targetID, consts.eventNames.windowEventWebContentsExecutedJavaScript));
             break;
+
+            // MinishDev
+            case consts.eventNames.sessionOnBeforeRequest:
+                elements[json.targetID].webContents.session.webRequest.onBeforeRequest({urls: json.urls}, (details, callback) => {
+                    registerCallback(json, consts.callbackNames.onBeforeRequest, details, consts.eventNames.sessionOnBeforeRequest, callback);
+                })
+            break;
         }
     });
 
