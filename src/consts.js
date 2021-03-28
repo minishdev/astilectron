@@ -4,7 +4,9 @@ module.exports = {
     callbackNames: {
         webContentsLogin: "web.contents.login",
         webContentsMessage: "web.contents.message",
-        onBeforeRequest: "on.before.request",
+        onBeforeRequestCallback: "on.before.request.callback",
+        onBeforeSendHeadersCallback: "on.before.send.headers.callback",
+        interceptBufferProtocolCallback: "intercept.buffer.protocol.callback"
     },
     eventNames: {
         appCmdQuit: "app.cmd.quit",
@@ -59,6 +61,7 @@ module.exports = {
         sessionEventWillDownload: "session.event.will.download",
         sessionEventFlushedStorage: "session.event.flushed.storage",
         sessionOnBeforeRequest: "session.on.before.request",
+        sessionOnBeforeSendHeaders: "session.on.before.send.headers",
         subMenuCmdAppend: "sub.menu.cmd.append",
         subMenuCmdClosePopup: "sub.menu.cmd.close.popup",
         subMenuCmdInsert: "sub.menu.cmd.insert",
@@ -119,7 +122,8 @@ module.exports = {
         windowEventUnmaximize: "window.event.unmaximize",
         windowEventUnresponsive: "window.event.unresponsive",
         windowEventWebContentsExecutedJavaScript: "window.event.web.contents.executed.javascript",
-        windowEventUpdatedCustomOptions: "window.event.updated.custom.options"
+        windowEventUpdatedCustomOptions: "window.event.updated.custom.options",
+        interceptBufferProtocol: "intercept.buffer.protocol"
     },
     targetIds: {
         app: 'app',

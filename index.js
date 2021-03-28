@@ -2,10 +2,11 @@
 'use strict'
 
 const electron = require('electron')
-const {app, BrowserWindow, ipcMain, Menu, MenuItem, Tray, dialog, Notification} = electron
+const {app, BrowserWindow, ipcMain, Menu, MenuItem, Tray, dialog, Notification, net} = electron
 const consts = require('./src/consts.js')
 const client = require('./src/client.js')
 const readline = require('readline')
+const fs = require('fs')
 
 let rl;
 let callbacks = {};
@@ -288,8 +289,97 @@ function onReady () {
             // MinishDev
             case consts.eventNames.sessionOnBeforeRequest:
                 elements[json.targetID].webContents.session.webRequest.onBeforeRequest({urls: json.urls}, (details, callback) => {
-                    registerCallback(json, consts.callbackNames.onBeforeRequest, details, consts.eventNames.sessionOnBeforeRequest, callback);
+                    registerCallback(json, consts.callbackNames.onBeforeRequestCallback, {onBeforeRequestDetails: details, reverseCallbackId: true, callbackId: json.callbackId}, consts.eventNames.sessionOnBeforeRequest, (newOnBeforeRequestDetails, cancel, deleteListener) => {
+                        if (deleteListener) {
+                            elements[json.targetID].webContents.session.webRequest.onBeforeRequest({urls: json.urls}, (details, callback) => {
+                                callback(details);
+                            })
+                        }
+                        
+                        if (cancel) {
+                            callback({cancel: true});
+                        } else {
+                            callback(newOnBeforeRequestDetails);
+                        }
+                    });
                 })
+            break;
+
+            case consts.callbackNames.onBeforeRequestCallback:
+            executeCallback(consts.callbackNames.onBeforeRequestCallback, json, [json.onBeforeRequestDetails, json.cancel, json.deleteListener]);
+            break;
+
+            case consts.eventNames.sessionOnBeforeSendHeaders:
+                elements[json.targetID].webContents.session.webRequest.onBeforeSendHeaders({urls: json.urls}, (details, callback) => {
+                    registerCallback(json, consts.callbackNames.onBeforeSendHeadersCallback, {onBeforeRequestDetails: details, reverseCallbackId: true, callbackId: json.callbackId}, consts.eventNames.sessionOnBeforeSendHeaders, (newOnBeforeSendHeadersDetails, cancel, deleteListener) => {
+                        if (deleteListener) {
+                            elements[json.targetID].webContents.session.webRequest.onBeforeSendHeaders({urls: json.urls}, (details, callback) => {
+                                callback(details);
+                            })
+                        }
+                        
+                        if (cancel) {
+                            callback({cancel: true});
+                        } else {
+                            callback(newOnBeforeSendHeadersDetails);
+                        }
+                    });
+                })
+            break;
+
+            case consts.callbackNames.onBeforeSendHeadersCallback:
+            executeCallback(consts.callbackNames.onBeforeSendHeadersCallback, json, [json.onBeforeSendHeadersDetails, json.cancel, json.deleteListener]);
+            break;
+
+            case consts.eventNames.interceptBufferProtocol:
+            elements[json.targetID].webContents.session.protocol.interceptBufferProtocol(json.protocol, (req, callback) => {
+                registerCallback(json, consts.callbackNames.interceptBufferProtocolCallback, {protocolRequest: req, reverseCallbackId: true, callbackId: json.callbackId}, consts.eventNames.interceptBufferProtocol, (protocolResponse, intercept) => {
+                    if (intercept) {
+                        protocolResponse.data = Buffer.from(protocolResponse.data);
+                        callback(protocolResponse);
+                    } else {
+                        elements[json.targetID].webContents.session.protocol.uninterceptProtocol(json.protocol);
+                        
+                        const request = net.request(req);
+
+                        request.on('response', res => {
+                            let chunks = []
+                            let response = {
+                                statusCode: res.statusCode,
+                                headers: res.headers,
+                                url: req.url,
+                                referrer: req.referrer,
+                                method: req.method
+                            };
+
+                            res.on('data', chunk => {
+                                chunks.push(Buffer.from(chunk))
+                            })
+
+                            res.on('end', () => {
+                                response.data = Buffer.concat(chunks);
+                                callback(response);
+                            })
+                        })
+
+                        if (req.uploadData) {
+                            req.uploadData.forEach(part => {
+                                if (part.bytes) {
+                                    request.write(part.bytes);
+                                } else if (part.file) {
+                                    request.write(fs.readFileSync(part.file));
+                                }
+                            })
+                        }
+
+                        request.end()
+                    }
+                });
+            })
+            break;
+
+            case consts.callbackNames.interceptBufferProtocolCallback:
+            executeCallback(consts.callbackNames.interceptBufferProtocolCallback, json, [json.protocolResponse, json.intercept]);
             break;
         }
     });
@@ -537,7 +627,11 @@ function registerCallback(json, k, e, n, c) {
     if (typeof counters[k] === "undefined") {
         counters[k] = 1;
     }
-    e.callbackId = String(counters[k]++);
+
+    if (!e.reverseCallbackId) {
+        e.callbackId = String(counters[k]++);
+    }
+
     if (typeof callbacks[k] === "undefined") {
         callbacks[k] = {};
     }
